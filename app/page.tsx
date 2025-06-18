@@ -1,394 +1,550 @@
 "use client"
 
 import { useState } from "react"
+import { Calculator, Ruler, Weight, DollarSign, FileText } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Calculator, Beaker, Droplets, Info } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
 
-export default function OsmolarityCalculator() {
-  const [manualInputs, setManualInputs] = useState({
-    concentration: "",
-    molecularWeight: "",
-    dissociationFactor: "1",
-    volume: "1",
-  })
+export default function AsphaltCalculatorPro() {
+  // Area Calculator State
+  const [length, setLength] = useState("")
+  const [width, setWidth] = useState("")
+  const [lengthUnit, setLengthUnit] = useState("ft")
+  const [widthUnit, setWidthUnit] = useState("ft")
 
-  const [multipleInputs, setMultipleInputs] = useState([
-    { concentration: "", molecularWeight: "", dissociationFactor: "1", name: "" },
-  ])
+  // Volume Calculator State
+  const [area, setArea] = useState("")
+  const [thickness, setThickness] = useState("")
+  const [areaUnit, setAreaUnit] = useState("sqft")
+  const [thicknessUnit, setThicknessUnit] = useState("in")
 
-  const [selectedSolution, setSelectedSolution] = useState("")
-  const [results, setResults] = useState<{
-    osmolarity: number
-    osmolality: number
-    tonicity: string
-  } | null>(null)
+  // Weight Calculator State
+  const [volume, setVolume] = useState("")
+  const [asphaltType, setAsphaltType] = useState("hot-mix")
+  const [volumeUnit, setVolumeUnit] = useState("cuft")
 
-  const commonSolutions = {
-    "normal-saline": { name: "Normal Saline (0.9% NaCl)", osmolarity: 308, osmolality: 308 },
-    "half-saline": { name: "Half Normal Saline (0.45% NaCl)", osmolarity: 154, osmolality: 154 },
-    d5w: { name: "5% Dextrose in Water", osmolarity: 278, osmolality: 278 },
-    "lactated-ringers": { name: "Lactated Ringer's", osmolarity: 273, osmolality: 273 },
-    "d5-normal-saline": { name: "5% Dextrose in Normal Saline", osmolarity: 586, osmolality: 586 },
-    "mannitol-20": { name: "20% Mannitol", osmolarity: 1098, osmolality: 1098 },
-    "sodium-bicarbonate": { name: "8.4% Sodium Bicarbonate", osmolarity: 2000, osmolality: 2000 },
+  // Cost Calculator State
+  const [quantity, setQuantity] = useState("")
+  const [pricePerUnit, setPricePerUnit] = useState("")
+  const [quantityUnit, setQuantityUnit] = useState("ton")
+
+  // Asphalt densities (lbs per cubic foot)
+  const asphaltDensities = {
+    "hot-mix": 145,
+    "warm-mix": 140,
+    "cold-mix": 135,
+    recycled: 130,
+    porous: 120,
   }
 
-  const calculateOsmolarity = (concentration: number, molecularWeight: number, dissociationFactor: number) => {
-    return (concentration * dissociationFactor * 1000) / molecularWeight
+  const calculateArea = () => {
+    const l = Number.parseFloat(length)
+    const w = Number.parseFloat(width)
+    if (!l || !w) return 0
+
+    // Convert to square feet
+    let lengthInFt = l
+    let widthInFt = w
+
+    if (lengthUnit === "m") lengthInFt = l * 3.28084
+    if (lengthUnit === "yd") lengthInFt = l * 3
+    if (widthUnit === "m") widthInFt = w * 3.28084
+    if (widthUnit === "yd") widthInFt = w * 3
+
+    return lengthInFt * widthInFt
   }
 
-  const handleManualCalculation = () => {
-    const conc = Number.parseFloat(manualInputs.concentration)
-    const mw = Number.parseFloat(manualInputs.molecularWeight)
-    const df = Number.parseFloat(manualInputs.dissociationFactor)
+  const calculateVolume = () => {
+    const a = Number.parseFloat(area)
+    const t = Number.parseFloat(thickness)
+    if (!a || !t) return 0
 
-    if (conc && mw && df) {
-      const osmolarity = calculateOsmolarity(conc, mw, df)
-      const osmolality = osmolarity // Approximation for dilute solutions
-      const tonicity = osmolarity < 280 ? "Hypotonic" : osmolarity > 320 ? "Hypertonic" : "Isotonic"
+    // Convert area to square feet
+    let areaInSqFt = a
+    if (areaUnit === "sqm") areaInSqFt = a * 10.7639
+    if (areaUnit === "sqyd") areaInSqFt = a * 9
 
-      setResults({ osmolarity, osmolality, tonicity })
-    }
+    // Convert thickness to feet
+    let thicknessInFt = t
+    if (thicknessUnit === "in") thicknessInFt = t / 12
+    if (thicknessUnit === "cm") thicknessInFt = t / 30.48
+    if (thicknessUnit === "mm") thicknessInFt = t / 304.8
+
+    return areaInSqFt * thicknessInFt
   }
 
-  const handleMultipleCalculation = () => {
-    let totalOsmolarity = 0
+  const calculateWeight = () => {
+    const v = Number.parseFloat(volume)
+    if (!v) return { tons: 0, pounds: 0 }
 
-    multipleInputs.forEach((input) => {
-      const conc = Number.parseFloat(input.concentration)
-      const mw = Number.parseFloat(input.molecularWeight)
-      const df = Number.parseFloat(input.dissociationFactor)
+    // Convert volume to cubic feet
+    let volumeInCuFt = v
+    if (volumeUnit === "cum") volumeInCuFt = v * 35.3147
+    if (volumeUnit === "cuyd") volumeInCuFt = v * 27
 
-      if (conc && mw && df) {
-        totalOsmolarity += calculateOsmolarity(conc, mw, df)
-      }
-    })
+    const density = asphaltDensities[asphaltType as keyof typeof asphaltDensities]
+    const pounds = volumeInCuFt * density
+    const tons = pounds / 2000
 
-    const tonicity = totalOsmolarity < 280 ? "Hypotonic" : totalOsmolarity > 320 ? "Hypertonic" : "Isotonic"
-    setResults({ osmolarity: totalOsmolarity, osmolality: totalOsmolarity, tonicity })
+    return { tons, pounds }
   }
 
-  const addSoluteInput = () => {
-    setMultipleInputs([
-      ...multipleInputs,
-      { concentration: "", molecularWeight: "", dissociationFactor: "1", name: "" },
-    ])
+  const calculateCost = () => {
+    const q = Number.parseFloat(quantity)
+    const p = Number.parseFloat(pricePerUnit)
+    if (!q || !p) return 0
+
+    return q * p
   }
 
-  const removeSoluteInput = (index: number) => {
-    setMultipleInputs(multipleInputs.filter((_, i) => i !== index))
-  }
-
-  const updateSoluteInput = (index: number, field: string, value: string) => {
-    const updated = [...multipleInputs]
-    updated[index] = { ...updated[index], [field]: value }
-    setMultipleInputs(updated)
-  }
-
-  const handlePresetSolution = () => {
-    if (selectedSolution && commonSolutions[selectedSolution as keyof typeof commonSolutions]) {
-      const solution = commonSolutions[selectedSolution as keyof typeof commonSolutions]
-      const tonicity = solution.osmolarity < 280 ? "Hypotonic" : solution.osmolarity > 320 ? "Hypertonic" : "Isotonic"
-      setResults({
-        osmolarity: solution.osmolarity,
-        osmolality: solution.osmolality,
-        tonicity,
-      })
-    }
-  }
+  const areaResult = calculateArea()
+  const volumeResult = calculateVolume()
+  const weightResult = calculateWeight()
+  const costResult = calculateCost()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Calculator className="h-8 w-8 text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Osmolarity Calculator Pro</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Header */}
+      <header className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <div className="bg-orange-600 p-2 rounded-lg">
+                <Calculator className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Asphalt Calculator Pro</h1>
+                <p className="text-sm text-gray-500">Professional Construction Tools</p>
+              </div>
+            </div>
+            <Badge variant="secondary" className="bg-orange-100 text-orange-800">
+              v2.1 Pro
+            </Badge>
           </div>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Professional-grade osmolarity and osmolality calculator for laboratory, clinical, and research applications
-          </p>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">Professional Asphalt Calculations</h2>
+          <p className="text-gray-600">Accurate calculations for area, volume, weight, and cost estimation</p>
         </div>
 
-        <div className="max-w-6xl mx-auto">
-          <Tabs defaultValue="manual" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-8">
-              <TabsTrigger value="manual" className="flex items-center gap-2">
-                <Beaker className="h-4 w-4" />
-                Manual Calculation
-              </TabsTrigger>
-              <TabsTrigger value="multiple" className="flex items-center gap-2">
-                <Droplets className="h-4 w-4" />
-                Multiple Solutes
-              </TabsTrigger>
-              <TabsTrigger value="preset" className="flex items-center gap-2">
-                <Info className="h-4 w-4" />
-                Common Solutions
-              </TabsTrigger>
-            </TabsList>
+        <Tabs defaultValue="area" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 lg:w-fit">
+            <TabsTrigger value="area" className="flex items-center gap-2">
+              <Ruler className="h-4 w-4" />
+              Area
+            </TabsTrigger>
+            <TabsTrigger value="volume" className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              Volume
+            </TabsTrigger>
+            <TabsTrigger value="weight" className="flex items-center gap-2">
+              <Weight className="h-4 w-4" />
+              Weight
+            </TabsTrigger>
+            <TabsTrigger value="cost" className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4" />
+              Cost
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Manual Calculation Tab */}
-            <TabsContent value="manual">
-              <div className="grid md:grid-cols-2 gap-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Single Solute Calculation</CardTitle>
-                    <CardDescription>Calculate osmolarity for a single solute solution</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="concentration">Concentration (g/L)</Label>
+          {/* Area Calculator */}
+          <TabsContent value="area">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Ruler className="h-5 w-5 text-orange-600" />
+                    Area Calculator
+                  </CardTitle>
+                  <CardDescription>Calculate the surface area for your asphalt project</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="length">Length</Label>
+                      <div className="flex gap-2">
                         <Input
-                          id="concentration"
+                          id="length"
                           type="number"
-                          placeholder="e.g., 9.0"
-                          value={manualInputs.concentration}
-                          onChange={(e) => setManualInputs({ ...manualInputs, concentration: e.target.value })}
+                          placeholder="0"
+                          value={length}
+                          onChange={(e) => setLength(e.target.value)}
                         />
-                      </div>
-                      <div>
-                        <Label htmlFor="molecular-weight">Molecular Weight (g/mol)</Label>
-                        <Input
-                          id="molecular-weight"
-                          type="number"
-                          placeholder="e.g., 58.44"
-                          value={manualInputs.molecularWeight}
-                          onChange={(e) => setManualInputs({ ...manualInputs, molecularWeight: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="dissociation">Dissociation Factor</Label>
-                        <Select
-                          value={manualInputs.dissociationFactor}
-                          onValueChange={(value) => setManualInputs({ ...manualInputs, dissociationFactor: value })}
-                        >
-                          <SelectTrigger>
+                        <Select value={lengthUnit} onValueChange={setLengthUnit}>
+                          <SelectTrigger className="w-20">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="1">1 (Non-electrolyte)</SelectItem>
-                            <SelectItem value="2">2 (NaCl, KCl)</SelectItem>
-                            <SelectItem value="3">3 (CaCl₂, MgSO₄)</SelectItem>
-                            <SelectItem value="4">4 (AlCl₃)</SelectItem>
+                            <SelectItem value="ft">ft</SelectItem>
+                            <SelectItem value="m">m</SelectItem>
+                            <SelectItem value="yd">yd</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
-                      <div>
-                        <Label htmlFor="volume">Volume (L)</Label>
-                        <Input
-                          id="volume"
-                          type="number"
-                          placeholder="1.0"
-                          value={manualInputs.volume}
-                          onChange={(e) => setManualInputs({ ...manualInputs, volume: e.target.value })}
-                        />
-                      </div>
-                    </div>
-                    <Button onClick={handleManualCalculation} className="w-full">
-                      Calculate Osmolarity
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Formula & Information</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                      <h4 className="font-semibold mb-2">Osmolarity Formula:</h4>
-                      <p className="text-sm font-mono bg-white p-2 rounded">Osmolarity = (C × i × 1000) / MW</p>
-                      <div className="text-xs text-gray-600 mt-2 space-y-1">
-                        <p>C = Concentration (g/L)</p>
-                        <p>i = Dissociation factor</p>
-                        <p>MW = Molecular weight (g/mol)</p>
-                      </div>
                     </div>
                     <div className="space-y-2">
-                      <h4 className="font-semibold">Reference Values:</h4>
-                      <div className="text-sm space-y-1">
-                        <p>• Normal plasma: 280-320 mOsm/L</p>
-                        <p>• Hypotonic: {"<"} 280 mOsm/L</p>
-                        <p>• Isotonic: 280-320 mOsm/L</p>
-                        <p>• Hypertonic: {">"} 320 mOsm/L</p>
+                      <Label htmlFor="width">Width</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="width"
+                          type="number"
+                          placeholder="0"
+                          value={width}
+                          onChange={(e) => setWidth(e.target.value)}
+                        />
+                        <Select value={widthUnit} onValueChange={setWidthUnit}>
+                          <SelectTrigger className="w-20">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ft">ft</SelectItem>
+                            <SelectItem value="m">m</SelectItem>
+                            <SelectItem value="yd">yd</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* Multiple Solutes Tab */}
-            <TabsContent value="multiple">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Multiple Solutes Calculation</CardTitle>
-                  <CardDescription>
-                    Calculate total osmolarity for solutions containing multiple solutes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {multipleInputs.map((input, index) => (
-                    <div key={index} className="border rounded-lg p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium">Solute {index + 1}</h4>
-                        {multipleInputs.length > 1 && (
-                          <Button variant="outline" size="sm" onClick={() => removeSoluteInput(index)}>
-                            Remove
-                          </Button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div>
-                          <Label>Name (optional)</Label>
-                          <Input
-                            placeholder="e.g., NaCl"
-                            value={input.name}
-                            onChange={(e) => updateSoluteInput(index, "name", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Concentration (g/L)</Label>
-                          <Input
-                            type="number"
-                            placeholder="9.0"
-                            value={input.concentration}
-                            onChange={(e) => updateSoluteInput(index, "concentration", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Molecular Weight</Label>
-                          <Input
-                            type="number"
-                            placeholder="58.44"
-                            value={input.molecularWeight}
-                            onChange={(e) => updateSoluteInput(index, "molecularWeight", e.target.value)}
-                          />
-                        </div>
-                        <div>
-                          <Label>Dissociation Factor</Label>
-                          <Select
-                            value={input.dissociationFactor}
-                            onValueChange={(value) => updateSoluteInput(index, "dissociationFactor", value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="1">1</SelectItem>
-                              <SelectItem value="2">2</SelectItem>
-                              <SelectItem value="3">3</SelectItem>
-                              <SelectItem value="4">4</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <div className="flex gap-3">
-                    <Button variant="outline" onClick={addSoluteInput}>
-                      Add Another Solute
-                    </Button>
-                    <Button onClick={handleMultipleCalculation}>Calculate Total Osmolarity</Button>
                   </div>
                 </CardContent>
               </Card>
-            </TabsContent>
 
-            {/* Preset Solutions Tab */}
-            <TabsContent value="preset">
-              <div className="grid md:grid-cols-2 gap-8">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Common IV Fluids & Solutions</CardTitle>
-                    <CardDescription>
-                      Select from pre-calculated osmolarity values for common medical solutions
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="solution-select">Select Solution</Label>
-                      <Select value={selectedSolution} onValueChange={setSelectedSolution}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose a solution..." />
+              <Card>
+                <CardHeader>
+                  <CardTitle>Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-orange-50 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-orange-900">{areaResult.toLocaleString()} sq ft</div>
+                      <div className="text-sm text-orange-700">Total Area</div>
+                    </div>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="font-medium">{(areaResult / 9).toFixed(2)} sq yd</div>
+                        <div className="text-gray-500">Square Yards</div>
+                      </div>
+                      <div>
+                        <div className="font-medium">{(areaResult / 10.764).toFixed(2)} sq m</div>
+                        <div className="text-gray-500">Square Meters</div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Volume Calculator */}
+          <TabsContent value="volume">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calculator className="h-5 w-5 text-orange-600" />
+                    Volume Calculator
+                  </CardTitle>
+                  <CardDescription>Calculate the volume of asphalt needed</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="area">Area</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="area"
+                        type="number"
+                        placeholder="0"
+                        value={area}
+                        onChange={(e) => setArea(e.target.value)}
+                      />
+                      <Select value={areaUnit} onValueChange={setAreaUnit}>
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(commonSolutions).map(([key, solution]) => (
-                            <SelectItem key={key} value={key}>
-                              {solution.name}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="sqft">sq ft</SelectItem>
+                          <SelectItem value="sqm">sq m</SelectItem>
+                          <SelectItem value="sqyd">sq yd</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
-                    <Button onClick={handlePresetSolution} className="w-full">
-                      Get Osmolarity Values
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Solution Reference Guide</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {Object.entries(commonSolutions).map(([key, solution]) => (
-                        <div key={key} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                          <span className="text-sm font-medium">{solution.name}</span>
-                          <Badge variant="secondary">{solution.osmolarity} mOsm/L</Badge>
-                        </div>
-                      ))}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="thickness">Thickness</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="thickness"
+                        type="number"
+                        placeholder="0"
+                        value={thickness}
+                        onChange={(e) => setThickness(e.target.value)}
+                      />
+                      <Select value={thicknessUnit} onValueChange={setThicknessUnit}>
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="in">in</SelectItem>
+                          <SelectItem value="cm">cm</SelectItem>
+                          <SelectItem value="mm">mm</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          </Tabs>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Results Display */}
-          {results && (
-            <Card className="mt-8">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
-                  Calculation Results
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid md:grid-cols-3 gap-6">
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-blue-800">Osmolarity</h3>
-                    <p className="text-3xl font-bold text-blue-600">{results.osmolarity.toFixed(1)}</p>
-                    <p className="text-sm text-blue-600">mOsm/L</p>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-blue-900">{volumeResult.toFixed(2)} cu ft</div>
+                      <div className="text-sm text-blue-700">Total Volume</div>
+                    </div>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="font-medium">{(volumeResult / 27).toFixed(2)} cu yd</div>
+                        <div className="text-gray-500">Cubic Yards</div>
+                      </div>
+                      <div>
+                        <div className="font-medium">{(volumeResult / 35.315).toFixed(2)} cu m</div>
+                        <div className="text-gray-500">Cubic Meters</div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-green-800">Osmolality</h3>
-                    <p className="text-3xl font-bold text-green-600">{results.osmolality.toFixed(1)}</p>
-                    <p className="text-sm text-green-600">mOsm/kg</p>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Weight Calculator */}
+          <TabsContent value="weight">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Weight className="h-5 w-5 text-orange-600" />
+                    Weight Calculator
+                  </CardTitle>
+                  <CardDescription>Calculate the weight of asphalt based on volume and type</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="volume">Volume</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="volume"
+                        type="number"
+                        placeholder="0"
+                        value={volume}
+                        onChange={(e) => setVolume(e.target.value)}
+                      />
+                      <Select value={volumeUnit} onValueChange={setVolumeUnit}>
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cuft">cu ft</SelectItem>
+                          <SelectItem value="cum">cu m</SelectItem>
+                          <SelectItem value="cuyd">cu yd</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <h3 className="text-lg font-semibold text-purple-800">Tonicity</h3>
-                    <p className="text-2xl font-bold text-purple-600">{results.tonicity}</p>
-                    <p className="text-sm text-purple-600">Classification</p>
+                  <div className="space-y-2">
+                    <Label htmlFor="asphalt-type">Asphalt Type</Label>
+                    <Select value={asphaltType} onValueChange={setAsphaltType}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="hot-mix">Hot Mix Asphalt (145 lb/cu ft)</SelectItem>
+                        <SelectItem value="warm-mix">Warm Mix Asphalt (140 lb/cu ft)</SelectItem>
+                        <SelectItem value="cold-mix">Cold Mix Asphalt (135 lb/cu ft)</SelectItem>
+                        <SelectItem value="recycled">Recycled Asphalt (130 lb/cu ft)</SelectItem>
+                        <SelectItem value="porous">Porous Asphalt (120 lb/cu ft)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-green-50 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-green-900">{weightResult.tons.toFixed(2)} tons</div>
+                      <div className="text-sm text-green-700">Total Weight</div>
+                    </div>
+                    <Separator />
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Pounds:</span>
+                        <span className="font-medium">{weightResult.pounds.toLocaleString()} lbs</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Kilograms:</span>
+                        <span className="font-medium">{(weightResult.pounds * 0.453592).toLocaleString()} kg</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Density:</span>
+                        <span className="font-medium">
+                          {asphaltDensities[asphaltType as keyof typeof asphaltDensities]} lb/cu ft
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Cost Calculator */}
+          <TabsContent value="cost">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-orange-600" />
+                    Cost Calculator
+                  </CardTitle>
+                  <CardDescription>Calculate the total cost of your asphalt project</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="quantity">Quantity</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="quantity"
+                        type="number"
+                        placeholder="0"
+                        value={quantity}
+                        onChange={(e) => setQuantity(e.target.value)}
+                      />
+                      <Select value={quantityUnit} onValueChange={setQuantityUnit}>
+                        <SelectTrigger className="w-24">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ton">tons</SelectItem>
+                          <SelectItem value="cuyd">cu yd</SelectItem>
+                          <SelectItem value="sqft">sq ft</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price per Unit</Label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                        <Input
+                          id="price"
+                          type="number"
+                          placeholder="0.00"
+                          className="pl-8"
+                          value={pricePerUnit}
+                          onChange={(e) => setPricePerUnit(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Results</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="bg-purple-50 p-4 rounded-lg">
+                      <div className="text-2xl font-bold text-purple-900">${costResult.toLocaleString()}</div>
+                      <div className="text-sm text-purple-700">Total Cost</div>
+                    </div>
+                    <Separator />
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Quantity:</span>
+                        <span className="font-medium">
+                          {quantity} {quantityUnit}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Price per {quantityUnit.slice(0, -1)}:</span>
+                        <span className="font-medium">${pricePerUnit}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Tax (est. 8%):</span>
+                        <span className="font-medium">${(costResult * 0.08).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium pt-2 border-t">
+                        <span>Total with Tax:</span>
+                        <span>${(costResult * 1.08).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {/* Quick Reference */}
+        <Card className="mt-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-orange-600" />
+              Quick Reference
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div>
+                <h4 className="font-semibold mb-2">Typical Asphalt Thickness</h4>
+                <ul className="text-sm space-y-1 text-gray-600">
+                  <li>• Driveways: 2-3 inches</li>
+                  <li>• Parking lots: 3-4 inches</li>
+                  <li>• Roads: 4-6 inches</li>
+                  <li>• Heavy traffic: 6+ inches</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Coverage Estimates</h4>
+                <ul className="text-sm space-y-1 text-gray-600">
+                  <li>• 1 ton covers ~80 sq ft at 3"</li>
+                  <li>• 1 cu yd covers ~108 sq ft at 3"</li>
+                  <li>• Add 5-10% for waste</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-2">Cost Factors</h4>
+                <ul className="text-sm space-y-1 text-gray-600">
+                  <li>• Material: $40-80/ton</li>
+                  <li>• Installation: $3-7/sq ft</li>
+                  <li>• Prep work: $1-3/sq ft</li>
+                </ul>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   )
 }
